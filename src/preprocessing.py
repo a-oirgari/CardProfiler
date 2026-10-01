@@ -24,3 +24,7 @@ def run_full_pca(df_prepare):
     X_pca = pca.fit_transform(df_prepare)
     return pca, X_pca
 
+def n_components_for_threshold(pca, seuil= 0.80):
+    cumul = np.cumsum(pca.explained_variance_ratio_)
+    return int(np.argmax(cumul >= seuil) + 1)
+
