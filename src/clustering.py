@@ -55,3 +55,8 @@ def grid_dbscan(X_pca_full, comps=range(2, 6),
                              "n_clusters": s["n_clusters"],
                              "silhouette": s["silhouette"], "pct_bruit": s["pct_bruit"]})
     return pd.DataFrame(rows).sort_values("silhouette", ascending=False).reset_index(drop=True)
+
+def fit_dbscan(X_pca_full, n_components, eps, min_samples):
+    X = X_pca_full[:, :n_components]
+    labels = DBSCAN(eps=eps, min_samples=min_samples).fit_predict(X)
+    return labels, X
