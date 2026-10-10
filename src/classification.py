@@ -40,12 +40,11 @@ MODELS = {
 }
 
 
-# def setup_mlflow(experiment_name="classification_clients"):
-#     """Suivi dans mlflow.db (SQLite) ; les artefacts vont dans mlruns/."""
-#     mlflow.set_tracking_uri(f"sqlite:///{(ROOT / 'mlflow.db').as_posix()}")
-#     if mlflow.get_experiment_by_name(experiment_name) is None:
-#         mlflow.create_experiment(experiment_name, artifact_location=(ROOT / "mlruns").as_uri())
-#     mlflow.set_experiment(experiment_name)
+def setup_mlflow(experiment_name="classification_clients"):
+    mlflow.set_tracking_uri(f"sqlite:///{(ROOT / 'mlflow.db').as_posix()}")
+    if mlflow.get_experiment_by_name(experiment_name) is None:
+        mlflow.create_experiment(experiment_name, artifact_location=(ROOT / "mlruns").as_uri())
+    mlflow.set_experiment(experiment_name)
 
 
 def plot_confusion_matrix(y_true, y_pred, labels, title):
@@ -63,41 +62,41 @@ def train_and_log(name, classifier, param_grid, X_train, X_test, y_train, y_test
     labels = sorted(y_train.unique())
     pipe = Pipeline([("scaler", StandardScaler()), ("classifier", classifier)])
 
-    # with mlflow.start_run(run_name=name):
-    t0 = time.time()
-    gs = GridSearchCV(pipe, param_grid, cv=5, scoring="f1_macro", n_jobs=-1)
-    gs.fit(X_train, y_train)
-    duree = time.time() - t0
+    with mlflow.start_run(run_name=name):
+        t0 = time.time()
+        gs = GridSearchCV(pipe, param_grid, cv=5, scoring="f1_macro", n_jobs=-1)
+        gs.fit(X_train, y_train)
+        duree = time.time() - t0
 
-    best = gs.best_estimator_
-    y_pred = best.predict(X_test)
-    cv_scores = cross_val_score(best, X_train, y_train, cv=5, scoring="f1_macro", n_jobs=-1)
+        best = gs.best_estimator_
+        y_pred = best.predict(X_test)
+        cv_scores = cross_val_score(best, X_train, y_train, cv=5, scoring="f1_macro", n_jobs=-1)
 
-    metrics = {
-        "accuracy": accuracy_score(y_test, y_pred),
-        "precision": precision_score(y_test, y_pred, average="macro", zero_division=0),
-        "recall": recall_score(y_test, y_pred, average="macro", zero_division=0),
-        "f1_score": f1_score(y_test, y_pred, average="macro", zero_division=0),
-    }
+        metrics = {
+            "accuracy": accuracy_score(y_test, y_pred),
+            "precision": precision_score(y_test, y_pred, average="macro", zero_division=0),
+            "recall": recall_score(y_test, y_pred, average="macro", zero_division=0),
+            "f1_score": f1_score(y_test, y_pred, average="macro", zero_division=0),
+        }
 
         # ---- MLflow ----
-        # mlflow.log_param("model_type", name)
-        # mlflow.log_params({k.replace("classifier__", ""): v for k, v in gs.best_params_.items()})
-        # mlflow.log_metrics(metrics)
-        # mlflow.log_metric("train_time_s", duree)
-        # mlflow.sklearn.log_model(best, name="model", input_example=X_train.head(3))
-        #
-        # safe = name.replace(" ", "_")
-        # REPORTS_DIR.mkdir(exist_ok=True)
-        # fig = plot_confusion_matrix(y_test, y_pred, labels, f"Matrice de confusion - {name}")
-        # cm_path = REPORTS_DIR / f"cm_{safe}.png"
-        # fig.savefig(cm_path, dpi=120); plt.close(fig)
-        # mlflow.log_artifact(str(cm_path))
-        #
-        # report = classification_report(y_test, y_pred, zero_division=0)
-        # rep_path = REPORTS_DIR / f"report_{safe}.txt"
-        # rep_path.write_text(report, encoding="utf-8")
-        # mlflow.log_artifact(str(rep_path))
+        mlflow.log_param("model_type", name)
+        mlflow.log_params({k.replace("classifier__", ""): v for k, v in gs.best_params_.items()})
+        mlflow.log_metrics(metrics)
+        mlflow.log_metric("train_time_s", duree)
+        mlflow.sklearn.log_model(best, name="model", input_example=X_train.head(3), skops_trusted_types=["sklearn.tree._tree.Tree"])
+
+        safe = name.replace(" ", "_")
+        REPORTS_DIR.mkdir(exist_ok=True)
+        fig = plot_confusion_matrix(y_test, y_pred, labels, f"Matrice de confusion - {name}")
+        cm_path = REPORTS_DIR / f"cm_{safe}.png"
+        fig.savefig(cm_path, dpi=120); plt.close(fig)
+        mlflow.log_artifact(str(cm_path))
+
+        report = classification_report(y_test, y_pred, zero_division=0)
+        rep_path = REPORTS_DIR / f"report_{safe}.txt"
+        rep_path.write_text(report, encoding="utf-8")
+        mlflow.log_artifact(str(rep_path))
 
     return {"name": name, "pipeline": best, "y_pred": y_pred, "cv_scores": cv_scores,
             "train_time_s": duree, "best_params": gs.best_params_, **metrics}

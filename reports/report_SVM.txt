@@ -1,0 +1,9 @@
+                           precision    recall  f1-score   support
+
+          Clients Premium       0.95      0.89      0.92       679
+Clients à Faible Activité       0.92      0.93      0.92       626
+         Clients à Risque       0.90      0.97      0.94       485
+
+                 accuracy                           0.93      1790
+                macro avg       0.93      0.93      0.93      1790
+             weighted avg       0.93      0.93      0.93      1790
